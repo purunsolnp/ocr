@@ -1,0 +1,27 @@
+{
+  "OCR_REGION": [
+    473,
+    813,
+    1030,
+    986
+  ],
+  "OUTPUT_POSITION": [
+    959,
+    612
+  ],
+  "FONT_FAMILY": "Malgun Gothic",
+  "FONT_SIZE": 16,
+  "FONT_COLOR": "white",
+  "OUTPUT_MODE": "tk",
+  "OVERLAY_BG": "black",
+  "HOTKEY": "f8",
+  "ENGINE": "papago-nhn",
+  "USE_GPU": false,
+  "OCR_INTERVAL": 1.0,
+  "SOURCE_LANG": "zh-CN",
+  "TARGET_LANG": "ko",
+  "BROWSER_WIDTH": 1920,
+  "BROWSER_HEIGHT": 1080,
+  "VERTICAL": null,
+  "PRIMARY_MONITOR_SIDE": null
+}

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Overlay</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    #overlay-text {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      font-size: 32px;
+      font-family: 'Segoe UI', sans-serif;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 12px 24px;
+      border-radius: 12px;
+      max-width: 90vw;
+      white-space: pre-wrap;
+      pointer-events: none;
+      user-select: none;
+      transition: opacity 0.3s ease, visibility 0.3s;
+    }
+    
+    #overlay-text.transparent {
+      opacity: 0;
+      visibility: hidden;
+    }
+    
+    #size-info {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 5px;
+      font-size: 12px;
+      border-radius: 3px;
+      z-index: 1000;
+      transition: opacity 1s ease;
+    }
+    
+    #connection-status {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px;
+      border-radius: 3px;
+      font-size: 12px;
+      z-index: 1000;
+    }
+
+    #debug-panel {
+      position: absolute;
+      bottom: 25px;
+      right: 5px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px;
+      border-radius: 3px;
+      font-size: 10px;
+      z-index: 1000;
+      max-width: 300px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- 브라우저 크기 정보 표시 (OBS 설정 용) -->
+  <div id="size-info">권장 크기 계산 중...</div>
+  
+  <!-- 연결 상태 표시 (디버깅용) -->
+  <div id="connection-status">연결 상태: 대기 중...</div>
+  
+  <!-- 번역 텍스트 표시 영역 -->
+  <div id="overlay-text">로딩 중...</div>
+
+  <!-- 디버그 패널 (필요시 표시) -->
+  <div id="debug-panel"></div>
+
+  <!-- socket.io 연결 -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // 디버그 모드 설정 (문제 해결 후 false로 변경)
+    const DEBUG_MODE = true;
+    
+    // 주요 DOM 요소
+    const overlay = document.getElementById("overlay-text");
+    const sizeInfo = document.getElementById("size-info");
+    const connectionStatus = document.getElementById("connection-status");
+    const debugPanel = document.getElementById("debug-panel");
+    
+    // 디버그 모드일 때만 디버그 패널 표시
+    if (DEBUG_MODE) {
+      debugPanel.style.display = "block";
+    }
+    
+    // 디버그 로그 함수
+    function debugLog(message) {
+      if (DEBUG_MODE) {
+        console.log(message);
+        // 디버그 패널에도 표시 (최신 5개 메시지만)
+        const lines = debugPanel.innerHTML.split('<br>');
+        if (lines.length > 5) {
+          lines.pop();
+        }
+        debugPanel.innerHTML = message + '<br>' + lines.join('<br>');
+      }
+    }
+    
+    // 오버레이 상태 디버깅 함수
+    function logOverlayState() {
+      if (DEBUG_MODE) {
+        const isTransparent = overlay.classList.contains('transparent');
+        const computedStyle = window.getComputedStyle(overlay);
+        debugLog(`[오버레이 상태] 투명: ${isTransparent}, 불투명도: ${computedStyle.opacity}, 가시성: ${computedStyle.visibility}, 내용: ${overlay.textContent.length > 0 ? '있음' : '없음'}`);
+      }
+    }
+    
+    // 설정값 가져오기
+    fetch("/get_overlay_settings")
+      .then(res => res.json())
+      .then(settings => {
+        // 폰트 및 스타일 적용
+        if (settings.fontFamily) {
+          overlay.style.fontFamily = `'${settings.fontFamily}', 'Segoe UI', sans-serif`;
+        }
+        
+        if (settings.fontSize) {
+          overlay.style.fontSize = `${settings.fontSize}px`;
+        }
+        
+        if (settings.fontColor) {
+          overlay.style.color = settings.fontColor;
+        }
+        
+        if (settings.backgroundColor) {
+          overlay.style.backgroundColor = settings.backgroundColor;
+        }
+        
+        debugLog("[⚙️ 오버레이 설정 적용됨]");
+        connectionStatus.textContent = `설정 로드됨`;
+      })
+      .catch(error => {
+        console.error("[⚠️ 설정 가져오기 오류]", error);
+        connectionStatus.textContent = `설정 오류: ${error.message}`;
+      });
+
+    // overlay 위치 설정 (고정 위치 사용)
+    overlay.style.left = '10px';
+    overlay.style.top = '10px';
+      
+    // 권장 크기 정보 가져오기
+    fetch('/get_browser_size')
+      .then(response => response.json())
+      .then(data => {
+        // 크기 정보 계산
+        const ocr_width = data.width;
+        const ocr_height = data.height;
+        const recommended_height = data.recommended_height || Math.max(120, Math.floor(ocr_height * 0.4));
+        
+        // 권장 크기 메시지 표시 (대사창 스타일)
+        sizeInfo.innerHTML = `
+          <strong>OBS 브라우저 소스 설정 안내</strong><br>
+          <strong>OCR 영역 크기:</strong> ${ocr_width} × ${ocr_height}px<br>
+          <strong>권장 브라우저 크기:</strong> ${ocr_width} × ${recommended_height}px<br>
+          <strong>CSS:</strong> overflow: visible
+        `;
+        
+        // 15초 후 크기 정보 숨기기
+        setTimeout(() => {
+          sizeInfo.style.opacity = '0';
+          setTimeout(() => {
+            sizeInfo.style.display = 'none';
+          }, 1000);
+        }, 15000);
+      })
+      .catch(error => {
+        console.error('크기 정보 가져오기 오류:', error);
+        sizeInfo.textContent = '크기 정보 오류: ' + error.message;
+      });
+
+    // 연결 상태 관리 변수
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 5;
+    
+    // 연결 테스트
+    function checkSocket() {
+      if (socket.connected) {
+        connectionStatus.textContent = '연결 상태: 연결됨';
+        connectionStatus.style.backgroundColor = 'rgba(0, 128, 0, 0.7)';
+        reconnectAttempts = 0; // 연결 성공 시 시도 카운터 초기화
+      } else {
+        connectionStatus.textContent = `연결 상태: 끊김 (재시도: ${reconnectAttempts+1}/${MAX_RECONNECT_ATTEMPTS})`;
+        connectionStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+        
+        // 최대 시도 횟수 이내일 때만 재연결 시도
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          debugLog(`[🔄 재연결 시도] ${reconnectAttempts+1}/${MAX_RECONNECT_ATTEMPTS}`);
+          socket.connect();
+          reconnectAttempts++;
+        } else {
+          debugLog("[⚠️ 최대 재연결 시도 횟수 초과]");
+          connectionStatus.textContent = `연결 상태: 실패 (최대 시도 횟수 초과)`;
+        }
+      }
+    }
+    
+    // 투명 모드 설정 함수 (이벤트 처리 통합)
+    function setTransparentMode(transparent = true) {
+      // 기존 애니메이션 타이머 제거
+      if (window.transparencyTimer) {
+        clearTimeout(window.transparencyTimer);
+      }
+      
+      if (transparent) {
+        debugLog("[🔍 투명 모드로 전환]");
+        overlay.classList.add('transparent');
+        
+        // 애니메이션 완료 후 텍스트 제거 (가시성 변경 애니메이션과 동기화)
+        window.transparencyTimer = setTimeout(() => {
+          overlay.textContent = '';
+          logOverlayState();
+        }, 300); // CSS transition과 동일한 시간
+      } else {
+        overlay.classList.remove('transparent');
+        debugLog("[🔍 일반 모드로 전환]");
+        logOverlayState();
+      }
+    }
+    
+    // WebSocket 연결
+    const socket = io();
+
+    socket.on("connect", () => {
+      debugLog("🔌 WebSocket 연결됨");
+      connectionStatus.textContent = '연결 상태: 연결됨';
+      connectionStatus.style.backgroundColor = 'rgba(0, 128, 0, 0.7)';
+      
+      // 수동으로 텍스트 요청
+      socket.emit('get_latest_text');
+      
+      // 현재 오버레이 상태 로깅
+      logOverlayState();
+    });
+
+    // 오버레이 모드 변경 이벤트 처리 (투명/일반)
+    socket.on("set_overlay_mode", (mode) => {
+      debugLog("[🔍 오버레이 모드 변경]:" + mode);
+      
+      if (mode === 'transparent') {
+        setTransparentMode(true);
+      } else {
+        setTransparentMode(false);
+      }
+    });
+
+    // 텍스트 업데이트 이벤트 처리
+    socket.on("overlay_text", (text) => {
+      debugLog("[📥 텍스트 수신]: " + (text.length > 20 ? text.substring(0, 20) + "..." : text));
+      
+      // 기본 텍스트("번역 없음") 처리
+      if (text === "(번역 없음)") {
+        debugLog("[🔍 기본 텍스트 감지됨 - 투명 모드로 전환]");
+        setTransparentMode(true);
+      } else {
+        // 일반 텍스트 처리
+        setTransparentMode(false);
+        overlay.textContent = text;
+      }
+      
+      // 상태 표시 업데이트
+      connectionStatus.textContent = `연결됨 - 텍스트 수신: ${new Date().toLocaleTimeString()}`;
+      
+      // 현재 오버레이 상태 로깅
+      logOverlayState();
+    });
+
+    socket.on("disconnect", () => {
+      debugLog("🔌 WebSocket 연결 끊김");
+      connectionStatus.textContent = '연결 상태: 끊김';
+      connectionStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+    });
+
+    socket.on("connect_error", (error) => {
+      debugLog("🚫 WebSocket 연결 오류: " + error.message);
+      connectionStatus.textContent = `연결 오류: ${error.message}`;
+      connectionStatus.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+    });
+    
+    // 초기 상태 설정 (로딩 중 텍스트 숨기기)
+    setTimeout(() => {
+      setTransparentMode(true);
+    }, 1000);
+    
+    // 주기적으로 연결 상태 확인 (3초마다)
+    setInterval(checkSocket, 3000);
+    
+    // 5초마다 최신 텍스트 요청 (연결 유지 및 상태 동기화)
+    setInterval(() => {
+      if (socket.connected) {
+        socket.emit('get_latest_text');
+      }
+    }, 5000);
+    
+    // 디버그 모드에서 키보드 단축키 추가
+    if (DEBUG_MODE) {
+      // 'D' 키를 누르면 현재 오버레이 상태 출력
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'd' || e.key === 'D') {
+          logOverlayState();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

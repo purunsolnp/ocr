@@ -1,0 +1,6 @@
+easyocr
+numpy
+pillow
+pyautogui
+keyboard
+requests
