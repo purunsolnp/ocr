@@ -23,7 +23,7 @@ app = Flask(__name__,
             static_folder=resource_path('static'))
 
 # 로깅 옵션 제거 또는 False로 설정
-socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False, async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
 
 # 텍스트 상태 저장
 default_text = "(번역 없음)"
