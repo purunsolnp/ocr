@@ -65,29 +65,43 @@ def get_language_display_name(code):
 def open_settings_window(overlay_label, hotkey_callback=None, restart_ocr=None):
     win = tk.Toplevel()
     win.title("설정")
-    win.geometry("450x780")  # 높이 증가
-    win.resizable(False, False)
-
+    
+    # 화면 해상도 감지
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    
+    # 화면 크기에 따른 창 너비 계산
+    window_width = min(450, int(screen_width * 0.35))
+    window_height = min(780, int(screen_height * 0.85))
+    
+    win.geometry(f"{window_width}x{window_height}")
+    win.resizable(True, True)  # 사용자가 창 크기를 조정할 수 있도록 설정
+    
     # 전체 스크롤 가능한 프레임 생성
     canvas = tk.Canvas(win)
     scrollbar = tk.Scrollbar(win, orient="vertical", command=canvas.yview)
     scrollable_frame = tk.Frame(canvas)
+    
+    # 창 크기가 변경될 때 스크롤 영역도 업데이트하는 함수
+    def on_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        # 캔버스 너비도 창 너비에 맞게 조정
+        canvas.config(width=event.width-20)  # 스크롤바 공간 고려
 
-    scrollable_frame.bind(
-        "<Configure>",
-        lambda e: canvas.configure(
-            scrollregion=canvas.bbox("all")
-        )
-    )
-
+    scrollable_frame.bind("<Configure>", on_configure)
+    win.bind("<Configure>", on_configure)  # 창 크기 변경 이벤트도 바인딩
+    
     canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
     canvas.configure(yscrollcommand=scrollbar.set)
-
+    
     canvas.pack(side="left", fill="both", expand=True)
     scrollbar.pack(side="right", fill="y")
-
+    
     # 기본 설정 영역
     frame = scrollable_frame
+    
+    # wrapling 너비 동적 계산
+    wrap_width = window_width - 30
 
     # 단축키 설정
     tk.Label(frame, text="단축키 (예: f8)").grid(row=0, column=0, sticky="e", pady=4)
@@ -161,21 +175,20 @@ def open_settings_window(overlay_label, hotkey_callback=None, restart_ocr=None):
     limited_langs_label = tk.Label(
         frame, 
         text=f"제한된 언어 목록: {limited_langs_display}",
-        justify="left", wraplength=430, fg="#666666", font=("Arial", 8)
+        justify="left", wraplength=wrap_width, fg="#666666", font=("Arial", 8)
     )
     limited_langs_label.grid(row=12, column=0, columnspan=2, sticky="w", pady=2)
     
     # 설명 레이블 추가
-    # wrapling 너비 변경 (340에서 430으로)
     auto_detect_desc = tk.Label(
         frame, 
         text="자동 감지 사용 시 원본 언어 설정은 무시됩니다.\n"
-            "제한된 언어 자동 감지를 사용하면 정확도가 향상되고 API 사용량이 감소합니다.\n"
-            "제한된 언어 목록에 없는 언어가 감지되면 영어로 간주합니다.",
-        justify="left", wraplength=430, fg="#666666", font=("Arial", 8)
+             "제한된 언어 자동 감지를 사용하면 정확도가 향상되고 API 사용량이 감소합니다.\n"
+             "제한된 언어 목록에 없는 언어가 감지되면 영어로 간주합니다.",
+        justify="left", wraplength=wrap_width, fg="#666666", font=("Arial", 8)
     )
-
     auto_detect_desc.grid(row=13, column=0, columnspan=2, sticky="w", pady=2)
+
 
     # 언어 설정 (자동 감지 체크 시 원본 언어 비활성화)
     tk.Label(frame, text="원본 언어").grid(row=14, column=0, sticky="e", pady=4)
@@ -340,3 +353,10 @@ def open_settings_window(overlay_label, hotkey_callback=None, restart_ocr=None):
     btn_frame.grid(row=17, column=0, columnspan=2, pady=10)
     save_btn = tk.Button(btn_frame, text="저장", command=apply_and_close, width=10)
     save_btn.pack(pady=5)
+        # 창 크기가 변경될 때 wraplength 업데이트
+    def update_wrap_width(event):
+        new_width = event.width - 30
+        auto_detect_desc.config(wraplength=new_width)
+        limited_langs_label.config(wraplength=new_width)
+    
+    win.bind("<Configure>", update_wrap_width)

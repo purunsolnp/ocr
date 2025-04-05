@@ -6,14 +6,22 @@ setlocal EnableDelayedExpansion
 :: 현재 디렉토리 설정
 cd /d %~dp0
 
+:: Python 설치 확인
+python --version >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [오류] Python이 설치되어 있지 않거나 경로에 추가되지 않았습니다.
+    echo Python을 설치한 후 다시 시도하세요 (https://www.python.org/downloads/)
+    echo Python 설치 시 "Add Python to PATH" 옵션을 반드시 체크하세요.
+    pause
+    exit /b 1
+)
+
 :: 필요한 패키지 설치
 echo 필요한 패키지 설치 중...
 pip install -r requirements.txt >nul 2>&1
 
 :: 프로그램 실행
 echo 소나기OCR을 시작합니다...
-
-:: 직접 Python으로 실행 (start 명령 대신)
 python main.py
 
 :: 오류 발생 시

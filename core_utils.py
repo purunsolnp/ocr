@@ -159,10 +159,21 @@ def create_status_window():
     win = tk.Toplevel()
     win.title("소나기OCR")
     win.iconbitmap("rururu.ico")
-    win.geometry("350x720")  # 창 너비를 260에서 280으로 증가
-    win.resizable(False, False)
-
-    btn_width = 28  # 버튼 너비 증가 (22에서 24로)
+    
+    # 화면 해상도 감지
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    
+    # 화면 너비에 따른 창 너비 계산 (화면 너비의 약 30%로 설정)
+    window_width = min(350, int(screen_width * 0.3))
+    # 높이도 필요에 따라 조정
+    window_height = min(720, int(screen_height * 0.8))
+    
+    # 버튼 너비도 화면 너비에 맞게 조정
+    btn_width = min(28, int(window_width / 10))
+    
+    win.geometry(f"{window_width}x{window_height}")
+    win.resizable(True, True)  # 사용자가 창 크기를 조정할 수 있도록 설정
 
     # 상태 표시줄에 padding 추가하여 드래그 영역 확장
     status = tk.Label(win, text="⚫ 번역 미사용", bg="#888888", fg="white", 
