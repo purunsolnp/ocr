@@ -1,11 +1,11 @@
 import tkinter as tk
 import threading
+import os
+import webbrowser
+import keyboard
 from core_utils import create_status_window, stop_ocr
 from overlay_webserver import run_flask_server
 from config import load_settings
-import keyboard
-import os
-import webbrowser
 
 flask_thread = None
 
@@ -89,8 +89,8 @@ if __name__ == "__main__":
         try:
             import tkinter as tk
             from tkinter import messagebox
-            root = tk.Tk()
-            root.withdraw()
+            error_root = tk.Tk()
+            error_root.withdraw()
             messagebox.showerror("소나기OCR 오류", f"프로그램 실행 중 오류가 발생했습니다:\n{str(e)}")
         except:
             pass

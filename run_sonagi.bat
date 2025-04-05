@@ -1,19 +1,25 @@
 @echo off
 echo ===== 소나기OCR 실행 준비 중 =====
-setlocal
+setlocal EnableDelayedExpansion
 
 :: 현재 디렉토리 설정
 cd /d %~dp0
 
 :: 필요한 패키지 설치
 echo 필요한 패키지 설치 중...
-pip install -r requirements.txt
+pip install -r requirements.txt >nul 2>&1
 
 :: 프로그램 실행
 echo 소나기OCR을 시작합니다...
-start pythonw main.py
 
-echo 프로그램이 백그라운드에서 실행됩니다.
-echo 번역 화면이 나타나지 않으면 작업 표시줄을 확인하세요.
-timeout /t 3
-exit
+:: 직접 Python으로 실행 (start 명령 대신)
+python main.py
+
+:: 오류 발생 시
+if %ERRORLEVEL% NEQ 0 (
+    echo 프로그램 실행 중 오류가 발생했습니다.
+    echo 로그를 확인하거나 Python이 정상적으로 설치되었는지 확인하세요.
+    pause
+) else (
+    echo 프로그램이 정상적으로 시작되었습니다.
+)
