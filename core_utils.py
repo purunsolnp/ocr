@@ -11,6 +11,7 @@ from overlay import create_overlay_window, update_overlay_position, hide_overlay
 from ocr import start_ocr_thread, stop_ocr
 from translator_dispatch import translate_text
 import keyboard
+import time
 
 def show_obs_setup_guide(parent, ocr_region):
     if not ocr_region:
@@ -152,11 +153,27 @@ def create_status_window():
 
     win = tk.Toplevel()
     win.title("소나기OCR")
-    win.iconbitmap("rururu.ico")
-    win.geometry("280x720")  # 창 너비를 260에서 280으로 증가
-    win.resizable(False, False)
-
-    btn_width = 24  # 버튼 너비 증가 (22에서 24로)
+    try:
+        # utils.py의 resource_path 함수를 사용하여 경로 처리
+        from utils import resource_path
+        icon_path = resource_path("rururu.ico")
+        if os.path.exists(icon_path):
+            win.iconbitmap(icon_path)
+    except Exception as e:
+        print(f"[⚠️ 아이콘 로딩 실패 (무시됨)]: {e}")
+    
+    # 화면 해상도 감지
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    
+    # 화면 너비에 따른 창 너비 계산
+    window_width = min(350, int(screen_width * 0.3))
+    window_height = min(720, int(screen_height * 0.8))
+    
+    win.geometry(f"{window_width}x{window_height}")
+    win.resizable(True, True)  # 창 크기 조절 가능
+    
+    btn_width = 24  # 버튼 너비
 
     # 상태 표시줄에 padding 추가하여 드래그 영역 확장
     status = tk.Label(win, text="⚫ 번역 미사용", bg="#888888", fg="white", 
@@ -219,45 +236,56 @@ def create_status_window():
             target_lang = get_setting("TARGET_LANG")
             print(f"[✅ 현재 번역 언어] {source_lang} → {target_lang}")
 
+    # core_utils.py의 toggle_translate 함수 수정
     def toggle_translate():
         nonlocal translating
-
-        if translating:
-            translating = False
-            stop_ocr()
-            hide_overlay()
-            update_status(False)
-        else:
-            if not get_setting("OCR_REGION"):
-                messagebox.showerror("오류", "OCR 영역이 설정되지 않았습니다. OCR 위치 재설정을 먼저 해주세요.")
-                return
-                
-            if mode_var.get() != "obs" and not get_setting("OUTPUT_POSITION"):
-                messagebox.showerror("오류", "출력 위치가 설정되지 않았습니다. Overlay 위치 재설정을 먼저 해주세요.")
-                return
-            
-            translating = True
-            engine = engine_var.get()
-            update_setting("ENGINE", engine)
-            mode = mode_var.get() or "tk"
-            print(f"[⚙️ 설정된 출력 모드]: {mode}")
-
-            from ocr import reinit_ocr_reader
-            reinit_ocr_reader()
-            start_ocr_thread(overlay_label, mode)
-            
-            if mode == "obs":
+        
+        try:
+            if translating:
+                translating = False
+                stop_ocr()
                 hide_overlay()
-                print("[🔍 OBS 모드: 오버레이 숨김]")
+                update_status(False)
             else:
-                overlay_label.master.deiconify()
-                update_overlay_position()
-                overlay_label.config(text="로딩 중...")
-                show_overlay()
-                print("[🔍 TK 모드: 오버레이 표시]")
+                if not get_setting("OCR_REGION"):
+                    messagebox.showerror("오류", "OCR 영역이 설정되지 않았습니다. OCR 위치 재설정을 먼저 해주세요.")
+                    return
+                    
+                if mode_var.get() != "obs" and not get_setting("OUTPUT_POSITION"):
+                    messagebox.showerror("오류", "출력 위치가 설정되지 않았습니다. Overlay 위치 재설정을 먼저 해주세요.")
+                    return
+                
+                translating = True
+                engine = engine_var.get()
+                update_setting("ENGINE", engine)
+                mode = mode_var.get() or "tk"
+                print(f"[⚙️ 설정된 출력 모드]: {mode}")
 
-            update_status(True)
+                from ocr import reinit_ocr_reader
+                reinit_ocr_reader()
+                start_ocr_thread(overlay_label, mode)
+                
+                if mode == "obs":
+                    hide_overlay()
+                    print("[🔍 OBS 모드: 오버레이 숨김]")
+                else:
+                    overlay_label.master.deiconify()
+                    update_overlay_position()
+                    overlay_label.config(text="로딩 중...")
+                    show_overlay()
+                    print("[🔍 TK 모드: 오버레이 표시]")
 
+                update_status(True)
+        except Exception as e:
+            # 오류 메시지를 파일에 기록
+            with open("error_log.txt", "a", encoding="utf-8") as f:
+                import traceback
+                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] 번역 시작 오류:\n")
+                f.write(traceback.format_exc())
+                f.write("\n\n")
+            
+            # 사용자에게 오류 알림
+            messagebox.showerror("오류", f"번역 시작 중 오류가 발생했습니다: {str(e)}\n자세한 내용은 error_log.txt 파일을 확인하세요.")
 
     # 토글 버튼에 명령 연결
     toggle_btn.config(command=toggle_translate)

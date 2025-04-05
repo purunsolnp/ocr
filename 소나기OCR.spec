@@ -1,48 +1,59 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
-from PyInstaller.utils.hooks import collect_all
 
-datas = []
-binaries = []
-hiddenimports = []
-datas += collect_data_files('flask_socketio')
-tmp_ret = collect_all('easyocr')
-datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
-
+block_cipher = None
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=binaries,
-    datas=datas,
-    hiddenimports=hiddenimports,
+    binaries=[],
+    datas=[
+        ('templates', 'templates'),  # Flask 템플릿 디렉터리 추가
+        ('static', 'static'),        # Flask static 디렉터리 추가
+        ('rururu.ico', '.'),         # 아이콘 파일 추가
+    ],
+    hiddenimports=[
+        'eventlet', 'gevent', 'engineio.async_drivers.eventlet', 
+        'engineio.async_drivers.gevent', 'engineio.async_drivers.threading',
+        'flask_socketio', 'socketio'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['matplotlib', 'notebook', 'PIL.ImageQt', 'docutils', 'sphinx'],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
-    optimize=0,
 )
-pyz = PYZ(a.pure)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
-    name='소나기OCR',
+    exclude_binaries=True,
+    name='SonagiOCR',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['rururu.ico'],
+    icon='rururu.ico',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='SonagiOCR',
 )

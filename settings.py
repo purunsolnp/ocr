@@ -47,8 +47,17 @@ def get_language_display_name(code):
 def open_settings_window(overlay_label, hotkey_callback=None, restart_ocr=None):
     win = tk.Toplevel()
     win.title("설정")
-    win.geometry("360x780")  # 높이 증가
-    win.resizable(False, False)
+    
+    # 화면 해상도 감지
+    screen_width = win.winfo_screenwidth()
+    screen_height = win.winfo_screenheight()
+    
+    # 화면 크기에 따른 창 너비 계산
+    window_width = min(450, int(screen_width * 0.35))
+    window_height = min(780, int(screen_height * 0.85))
+    
+    win.geometry(f"{window_width}x{window_height}")
+    win.resizable(True, True)  # 창 크기 조절 가능
 
     # 전체 스크롤 가능한 프레임 생성
     canvas = tk.Canvas(win)

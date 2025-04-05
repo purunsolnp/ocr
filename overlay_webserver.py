@@ -23,7 +23,17 @@ app = Flask(__name__,
             static_folder=resource_path('static'))
 
 # 로깅 옵션 제거 또는 False로 설정
-socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False, async_mode='threading')
+try:
+    import eventlet
+    async_mode = 'eventlet'
+except ImportError:
+    try:
+        import gevent
+        async_mode = 'gevent'
+    except ImportError:
+        async_mode = None  # SocketIO가 자동으로 최적의 모드 선택
+        
+socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False, async_mode=async_mode)
 
 # 텍스트 상태 저장
 default_text = "(번역 없음)"
@@ -32,9 +42,10 @@ latest_text = default_text
 # overlay_webserver.py의 run_flask_server 함수 수정
 def run_flask_server():
     print("🌐 Flask 서버 실행 중 (OBS 모드)")
-    import threading
-    # debug=True 제거 및 다른 옵션 간소화
-    threading.Thread(target=lambda: socketio.run(app, host="127.0.0.1", port=5000), daemon=True).start()
+    try:
+        socketio.run(app, host="127.0.0.1", port=5000)
+    except Exception as e:
+        print(f"Flask 서버 실행 오류: {e}")
 
 @app.route("/overlay")
 def serve_overlay_display():
