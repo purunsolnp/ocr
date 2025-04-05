@@ -159,11 +159,18 @@ def handle_set_overlay_mode(mode):
             emit("overlay_text", latest_text, broadcast=True)
 @app.route('/shutdown')
 def shutdown():
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-    func()
-    return 'Server shutting down...'
+    try:
+        func = request.environ.get('werkzeug.server.shutdown')
+        if func is None:
+            # 다른 종료 방법 시도
+            import os
+            os._exit(0)
+        func()
+        return 'Server shutting down...'
+    except:
+        # 강제 종료
+        import os
+        os._exit(0)
 
 # 웹서버 상태 확인용 라우트
 @app.route('/status')

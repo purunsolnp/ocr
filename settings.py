@@ -9,8 +9,26 @@ import tkinter.font as tkfont
 root = tk.Tk()
 root.withdraw()
 
-# ✅ 설치된 폰트 필터링
-available_fonts = list(tkfont.families())
+# 더 안전한 폰트 목록 가져오기 함수
+def get_font_list():
+    try:
+        temp_root = None
+        try:
+            temp_root = tk.Tk()
+            temp_root.withdraw()
+            available_fonts = list(tkfont.families())
+            return available_fonts
+        finally:
+            if temp_root:
+                try:
+                    temp_root.destroy()
+                except:
+                    pass
+    except:
+        # 기본 폰트 반환
+        return ["Malgun Gothic", "Arial", "Consolas"]
+# 사용
+available_fonts = get_font_list()
 
 # ✅ 사용하고자 하는 폰트들
 base_fonts = [

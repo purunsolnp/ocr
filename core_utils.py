@@ -11,6 +11,11 @@ from overlay import create_overlay_window, update_overlay_position, hide_overlay
 from ocr import start_ocr_thread, stop_ocr
 from translator_dispatch import translate_text
 import keyboard
+import threading
+import webview
+from PIL import Image, ImageTk
+import io
+import urllib.request
 
 def show_obs_setup_guide(parent, ocr_region):
     if not ocr_region:
@@ -143,6 +148,7 @@ def select_area(callback):
     canvas.bind("<ButtonRelease-1>", on_mouse_up)
 
     temp.mainloop()
+
 
 # 🪟 상태창 + overlay + 버튼 등 전체 생성
 def create_status_window():
@@ -413,12 +419,22 @@ def create_status_window():
     def quit_program():
         import requests
         stop_ocr()
+        
+        # Flask 서버 종료 시도
         try:
-            requests.get("http://localhost:5000/shutdown")
+            requests.get("http://localhost:5000/shutdown", timeout=1)
             print("🛑 Flask 서버 종료 요청 전송됨")
         except:
             print("⚠️ Flask 서버 종료 실패 (이미 종료되었거나 응답 없음)")
-        win.destroy()
+        
+        # Tkinter 정리
+        try:
+            if win and win.winfo_exists():
+                win.destroy()
+        except:
+            pass
+            
+        # 강제 종료
         os._exit(0)
 
     win.protocol("WM_DELETE_WINDOW", quit_program)
@@ -435,13 +451,144 @@ def create_status_window():
     tk.Button(win, text="⚙️ 설정", command=lambda: open_settings_window(overlay_label, toggle_translate, restart_ocr=toggle_translate), width=btn_width).pack(pady=2)
     tk.Button(win, text="❌ 프로그램 종료", command=quit_program, width=btn_width).pack(pady=2)
 
-    blog = tk.Label(win, text="🔗 블로그: sonagi-psy", fg="blue", cursor="hand2")
+    # 블로그 링크
+    blog = tk.Label(win, text="🔗 블로그: sonagi-psy", fg="blue", cursor="hand2") 
     blog.pack(pady=5)
     blog.bind("<Button-1>", lambda e: webbrowser.open("https://sonagi-psy.tistory.com/8"))
+    
+    # AdSense 웹뷰 프레임 생성 (상시 노출)
+    ad_frame = tk.Frame(win, height=100, bg="#f5f5f5")
+    ad_frame.pack(side="bottom", fill="x", pady=5)
 
+    # 제목 레이블
+    tk.Label(ad_frame, text="💫개발자 지원하기", bg="#f5f5f5", fg="#333333", font=("Arial", 9, "bold")).pack(pady=(5, 2))
+
+    # 버튼 프레임
+    button_frame = tk.Frame(ad_frame, bg="#f5f5f5")
+    button_frame.pack(pady=2)
+
+    # Buy Me a Coffee 버튼
+    coffee_btn = tk.Button(
+        button_frame, 
+        text="☕제작자 후원", 
+        bg="#FFDD00", fg="#000000",
+        command=lambda: webbrowser.open("https://www.buymeacoffee.com/sonagi")
+    )
+    coffee_btn.pack(side="left", padx=5)
+
+    # 광고 보기 버튼
+    ad_btn = tk.Button(
+        button_frame,
+        text="🌐 광고 보기",
+        bg="#4285F4", fg="white", 
+        command=lambda: webbrowser.open("https://sonagi-psy.tistory.com/15")
+    )
+    ad_btn.pack(side="left", padx=5)
+    
     return {
         "status": win,
         "overlay": overlay_label,
         "toggle_button": toggle_btn,
-        "output_mode_var": mode_var  # 메인에서 사용할 수 있도록 추가
+        "output_mode_var": mode_var
+        # "support_component": support_component  <- 이 부분 삭제 또는 주석 처리
     }
+
+def create_support_component(parent_window):
+    """후원 및 광고 컴포넌트 생성"""
+    support_frame = tk.Frame(parent_window, bg="#f5f5f5")
+    support_frame.pack(fill="x", side="bottom", pady=5)
+    
+    # 구분선 추가
+    separator = tk.Frame(support_frame, height=1, bg="#cccccc")
+    separator.pack(fill="x", pady=5)
+    
+    # 1. Buy Me a Coffee 후원 버튼
+    def create_buymeacoffee_button():
+        button_frame = tk.Frame(support_frame, bg="#f5f5f5")
+        button_frame.pack(pady=5)
+        
+        # 이미지를 가져오거나 로컬에 저장된 이미지 사용
+        try:
+            # 온라인 이미지 가져오기 (또는 로컬 파일 사용)
+            img_url = "https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+            with urllib.request.urlopen(img_url) as u:
+                raw_data = u.read()
+            img = Image.open(io.BytesIO(raw_data))
+            img = img.resize((160, 40), Image.LANCZOS)
+            photo = ImageTk.PhotoImage(img)
+            
+            # 이미지 버튼
+            btn = tk.Button(button_frame, image=photo, bd=0, 
+                          command=lambda: webbrowser.open("https://www.buymeacoffee.com/sonagi"))
+            btn.image = photo  # 참조 유지
+            btn.pack()
+        except:
+            # 이미지 로드 실패 시 텍스트 버튼
+            btn = tk.Button(button_frame, text="☕ Buy me a coffee", bg="#FFDD00", fg="#000000",
+                         command=lambda: webbrowser.open("https://www.buymeacoffee.com/sonagi"))
+            btn.pack()
+        
+        return button_frame
+    
+    buymeacoffee_btn = create_buymeacoffee_button()
+    
+    # 2. 내장 광고 웹뷰 (소나기 블로그 AdSense)
+    ad_frame = tk.Frame(support_frame)
+    ad_frame.pack(pady=5, fill="x")
+    
+    ad_label = tk.Label(ad_frame, text="💫 소나기OCR 후원 광고", bg="#f5f5f5", fg="#333333")
+    ad_label.pack()
+    
+    # 웹뷰 구현 (pywebview 사용)
+    def open_embedded_webview():
+        try:
+            # 웹뷰 프레임 생성
+            webview_frame = tk.Frame(support_frame, height=150)
+            webview_frame.pack(fill="x", expand=True, pady=5)
+            
+            # 별도 스레드에서 웹뷰 실행
+            def run_webview():
+                webview.create_window(
+                    'ad_window',  # 창 제목
+                    'https://sonagi-psy.tistory.com/15',  # AdSense가 포함된 블로그 페이지
+                    width=280,
+                    height=150,
+                    x=parent_window.winfo_x(),
+                    y=parent_window.winfo_y() + parent_window.winfo_height() - 200,
+                    resizable=True,
+                    frameless=True
+                )
+                webview.start()
+            
+            threading.Thread(target=run_webview, daemon=True).start()
+            return webview_frame
+        except Exception as e:
+            print(f"[⚠️ 광고 웹뷰 오류]: {e}")
+            # 오류 발생 시 대체 버튼
+            fallback_btn = tk.Button(
+                support_frame, 
+                text="블로그 방문하여 후원하기", 
+                command=lambda: webbrowser.open("https://sonagi-psy.tistory.com/15")
+            )
+            fallback_btn.pack(pady=5)
+            return fallback_btn
+    
+    # pywebview 지원 확인 후 광고 열기
+    try:
+        import webview
+        open_embedded_webview_btn = tk.Button(
+            ad_frame, 
+            text="광고 표시하기", 
+            command=open_embedded_webview
+        )
+        open_embedded_webview_btn.pack(pady=5)
+    except ImportError:
+        # webview 라이브러리가 없을 경우 대체 버튼
+        fallback_btn = tk.Button(
+            ad_frame, 
+            text="브라우저에서 광고 보기", 
+            command=lambda: webbrowser.open("https://sonagi-psy.tistory.com/15")
+        )
+        fallback_btn.pack(pady=5)
+    
+    return support_frame
