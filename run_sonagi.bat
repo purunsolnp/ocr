@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 echo ===== 소나기OCR 실행 준비 중 =====
 setlocal EnableDelayedExpansion
 
