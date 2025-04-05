@@ -65,7 +65,7 @@ def get_language_display_name(code):
 def open_settings_window(overlay_label, hotkey_callback=None, restart_ocr=None):
     win = tk.Toplevel()
     win.title("설정")
-    win.geometry("360x780")  # 높이 증가
+    win.geometry("450x780")  # 높이 증가
     win.resizable(False, False)
 
     # 전체 스크롤 가능한 프레임 생성
@@ -161,18 +161,20 @@ def open_settings_window(overlay_label, hotkey_callback=None, restart_ocr=None):
     limited_langs_label = tk.Label(
         frame, 
         text=f"제한된 언어 목록: {limited_langs_display}",
-        justify="left", wraplength=340, fg="#666666", font=("Arial", 8)
+        justify="left", wraplength=430, fg="#666666", font=("Arial", 8)
     )
     limited_langs_label.grid(row=12, column=0, columnspan=2, sticky="w", pady=2)
     
     # 설명 레이블 추가
+    # wrapling 너비 변경 (340에서 430으로)
     auto_detect_desc = tk.Label(
         frame, 
         text="자동 감지 사용 시 원본 언어 설정은 무시됩니다.\n"
-             "제한된 언어 자동 감지를 사용하면 정확도가 향상되고 API 사용량이 감소합니다.\n"
-             "제한된 언어 목록에 없는 언어가 감지되면 영어로 간주합니다.",
-        justify="left", wraplength=340, fg="#666666", font=("Arial", 8)
+            "제한된 언어 자동 감지를 사용하면 정확도가 향상되고 API 사용량이 감소합니다.\n"
+            "제한된 언어 목록에 없는 언어가 감지되면 영어로 간주합니다.",
+        justify="left", wraplength=430, fg="#666666", font=("Arial", 8)
     )
+
     auto_detect_desc.grid(row=13, column=0, columnspan=2, sticky="w", pady=2)
 
     # 언어 설정 (자동 감지 체크 시 원본 언어 비활성화)

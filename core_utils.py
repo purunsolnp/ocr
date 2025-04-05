@@ -159,10 +159,10 @@ def create_status_window():
     win = tk.Toplevel()
     win.title("소나기OCR")
     win.iconbitmap("rururu.ico")
-    win.geometry("280x720")  # 창 너비를 260에서 280으로 증가
+    win.geometry("350x720")  # 창 너비를 260에서 280으로 증가
     win.resizable(False, False)
 
-    btn_width = 24  # 버튼 너비 증가 (22에서 24로)
+    btn_width = 28  # 버튼 너비 증가 (22에서 24로)
 
     # 상태 표시줄에 padding 추가하여 드래그 영역 확장
     status = tk.Label(win, text="⚫ 번역 미사용", bg="#888888", fg="white", 
